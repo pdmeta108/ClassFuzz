@@ -7,9 +7,14 @@ from sklearn.model_selection import train_test_split
 import easygui
 from PyQt5 import QtWidgets
 from gui import Ui_MainWindow
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import sys
 import colorama
 from termcolor import colored
+# Scikit-Fuzzy
+import skfuzzy as fuzz
+import matplotlib.pyplot as plt
 
 #### VARIABLES GA ####
 mutProb = .05
@@ -76,6 +81,28 @@ class Population:
                 index = i
         return self.listpop[index]
 
+class PlotView(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+
+         # a figure instance to plot on
+        self.figure = plt.figure()
+
+        # this is the Canvas Widget that
+        # displays the 'figure'it takes the
+        # 'figure' instance as a parameter to __init__
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Minimum)
+        self.canvas.updateGeometry()
+        # this is the Navigation widget
+        # it takes the Canvas widget and a parent
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        layout = QtWidgets.QVBoxLayout()
+        # adding tool bar to the layout
+        layout.addWidget(self.toolbar)
+        # adding canvas to the layout
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
 
 class Main(QtWidgets.QMainWindow, Ui_MainWindow):
     # main class that creates the GUI and its functions
@@ -85,6 +112,7 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.file_location = "iris.data.txt"
         self.rules = []
         self.output = []
+        self.w = None
         super(self.__class__, self).__init__()
         self.setupUi(self)  # create the GUI
 
@@ -98,6 +126,9 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tourney_box.valueChanged.connect(self.tournament_value_changed)
         self.classify_button.clicked.connect(self.classify_button_clicked)
         self.rules_button.clicked.connect(self.rules_button_clicked)
+        self.plot_button.clicked.connect(self.plot_button_clicked)
+        if self.combo_box_parametros.currentTextChanged:
+            self.combo_box_parametros.currentTextChanged.connect(self.combo_box_changed)
 
         colorama.init()
 
@@ -200,6 +231,9 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.rules_button.setEnabled(True)
         self.sample_button.setEnabled(True)
+        self.combo_box_parametros.setEnabled(True)
+
+    def combo_box_changed(self):
         self.plot_button.setEnabled(True)
 
     def rules_button_clicked(self):
@@ -212,6 +246,25 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         print(s)
         # print(colored("Salida de cada regla", 'magenta'))
         # print(salidas)
+
+    def plot_button_clicked(self):
+
+        if self.w is None:
+            self.w = PlotView()
+            self.w.setWindowTitle("Gráfica de Funcion Miembro")
+            self.w.show()
+        else:
+            self.w.close()  # Close window.
+            self.w = None  # Discard reference.
+            self.w = PlotView()
+            self.w.setWindowTitle("Gráfica de Funcion Miembro")
+            self.w.show()
+        # clearing old figure
+        self.w.figure.clear()
+        plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentIndex())
+
+
+
 
 
     def train_to_test_ratio_slider_value_changed(self):
@@ -384,6 +437,48 @@ def intOutputtoClassOutput (salidas):
             textosalida += "Not Valid" + ", "
     return textosalida.rstrip(', ')
 
+def plot_memberhip_function(graph, parametro):
+
+    titulo_parametro = ""
+    x_data = None
+
+    # Variables universales
+    x_sepall = np.arange(0, 1.0001, 0.0001)
+    x_sepalw = np.arange(0, 1.0001, 0.0001)
+    x_petall = np.arange(0, 1.0001, 0.0001)
+    x_petalw = np.arange(0, 1.0001, 0.0001)
+
+    if parametro == 1:
+        titulo_parametro += "Sepal Largo"
+        x_data = x_sepall
+    elif parametro == 2:
+        titulo_parametro += "Sepal Ancho"
+        x_data = x_sepalw
+    elif parametro == 3:
+        titulo_parametro += "Petal Largo"
+        x_data = x_petall
+    elif parametro == 4:
+        titulo_parametro += "Petal Ancho"
+        x_data = x_petalw
+    else:
+        print(colored("Parametro invalido escoja otro", 'yellow'))
+        return
+
+    #Generar funciones miembro
+    pr_low = fuzz.trimf(x_data, [-0.5, 0, 0.5])
+    pr_med = fuzz.trimf(x_data, [0, 0.5, 1])
+    pr_hi = fuzz.trimf(x_data, [0.5, 1, 1.5])
+
+    # Visualizar universos y funciones miembros
+    ax0 = graph.figure.add_subplot(111)
+
+    ax0.plot(x_data, pr_low, 'b', linewidth=1.5, label='Bajo')
+    ax0.plot(x_data, pr_med, 'g', linewidth=1.5, label='Medio')
+    ax0.plot(x_data, pr_hi, 'r', linewidth=1.5, label='Alto')
+    ax0.set_title(titulo_parametro)
+    ax0.legend()
+
+    graph.canvas.draw()
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
