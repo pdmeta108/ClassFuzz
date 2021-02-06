@@ -24,6 +24,19 @@ popSize = 20
 GENERATION_NUMBER = 20
 ######################
 
+# Parametros de entrada
+
+# Parametros Plataforma Juego
+parametro1_arcade = ["Hongo / Tortuga", "Planta", "Dragon", "None"]  # Enemigo
+parametro2_arcade = ["Corto", "Medio", "Largo", "None"]  # Hueco
+parametro3_arcade = ["Tubo", "Bloque", "Muro", "None"]  # Obstáculo
+parametro4_arcade = ["Fuego", "Estrella", "Nube", "None"]  # Armas de Jugador
+
+# Parametros calculo Juego
+parametro1_calc = ["Suma / Resta", "Multiplicacion", "Division", "None"]  # Operacion
+parametro2_calc = ["Baja", "Media", "Alta", "None"]  # Puntaje
+parametro3_calc = ["Simple",  "Intermedio", "Complejo", "None"]  # Dificultad
+parametro4_calc = ["Completo", "Incompleto", "None"]  # Progreso
 
 class Indiv:
     def __init__(self, init=True):
@@ -112,6 +125,8 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.file_location = "iris.data.txt"
         self.rules = []
         self.output = []
+        self.entrada = []
+        self.salida = []
         self.w = None
         super(self.__class__, self).__init__()
         self.setupUi(self)  # create the GUI
@@ -121,12 +136,15 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.trainSlider.valueChanged.connect(self.train_to_test_ratio_slider_value_changed)
         self.train_spin_box.valueChanged.connect(self.train_to_test_ratio_spinbox_value_changed)
         self.train_button.clicked.connect(self.train_button_clicked)
+        self.mutation_box.valueChanged.connect(self.mutation_value_changed)
         self.poblation_box.valueChanged.connect(self.poblation_value_changed)
         self.generation_box.valueChanged.connect(self.generation_value_changed)
         self.tourney_box.valueChanged.connect(self.tournament_value_changed)
         self.classify_button.clicked.connect(self.classify_button_clicked)
         self.rules_button.clicked.connect(self.rules_button_clicked)
         self.plot_button.clicked.connect(self.plot_button_clicked)
+        if self.genre_box.currentTextChanged:
+            self.genre_box.currentTextChanged.connect(self.genre_box_changed)
         if self.combo_box_parametros.currentTextChanged:
             self.combo_box_parametros.currentTextChanged.connect(self.combo_box_changed)
 
@@ -149,12 +167,24 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             df = pd.read_csv(self.file_location)
 
+
+            # Obtener nombres de parametros de entrada
+            for col in df.columns:
+                if col == 'Clase':
+                    continue
+                else:
+                    self.entrada.append(col)
+
+            # Obtener nombres de parametros de salida
+            for class_name in df['Clase'].unique():
+                self.salida.append(class_name)
+
             # Normalizar los 4 parametros
             df.iloc[:, 0:4] = df.iloc[:, 0:4].apply(lambda x: x / np.max(x))
 
             X = df.iloc[:, 0:4]
 
-            # Cambiar 'Iris-Setosa' a 0, 'Iris-versicolor' a 1 y 'Iris-virginica' a 2
+            # Cambiar Clase1 a 0, Clase2 a 1 y Clase3 a 2
             # y despues convertirlo a pandas Series
             y = pd.Series(pd.factorize(df.iloc[:, 4])[0])
 
@@ -185,11 +215,16 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
 
             print(colored("Entrenamiento Exitoso: ", 'green'))
 
+            # Cambiar informacion de combo_box
+            self.combo_box_parametros.clear()
+            self.combo_box_parametros.addItems(self.entrada)
+
             # Activar botones
             self.classify_button.setEnabled(True)
             self.generation_box.setEnabled(True)
             self.poblation_box.setEnabled(True)
             self.tourney_box.setEnabled(True)
+            self.mutation_box.setEnabled(True)
         except FileNotFoundError:
             print(colored("Un archivo no fue especificado.", 'yellow'))
         except:
@@ -230,19 +265,63 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.output = salidas
 
         self.rules_button.setEnabled(True)
-        self.sample_button.setEnabled(True)
+        self.act_button.setEnabled(True)
         self.combo_box_parametros.setEnabled(True)
+        self.genre_box.setEnabled(True)
+
+    def genre_box_changed(self):
+
+        if self.genre_box.currentText() == "Plataforma":
+            self.parameter1_box.clear()
+            self.parameter2_box.clear()
+            self.parameter3_box.clear()
+            self.parameter4_box.clear()
+            self.parameter1_box.addItems(parametro1_arcade)
+            self.parameter2_box.addItems(parametro2_arcade)
+            self.parameter3_box.addItems(parametro3_arcade)
+            self.parameter4_box.addItems(parametro4_arcade)
+        elif self.genre_box.currentText() == "Calculo":
+            self.parameter1_box.clear()
+            self.parameter2_box.clear()
+            self.parameter3_box.clear()
+            self.parameter4_box.clear()
+            self.parameter1_box.addItems(parametro1_calc)
+            self.parameter2_box.addItems(parametro2_calc)
+            self.parameter3_box.addItems(parametro3_calc)
+            self.parameter4_box.addItems(parametro4_calc)
+        elif self.genre_box.currentText() == "Escoja":
+            pass
+        else:
+            print(colored("Opcion invalida, escoja otra", "yellow"))
+
+        self.parameter1_box.setEnabled(True)
+        self.parameter2_box.setEnabled(True)
+        self.parameter3_box.setEnabled(True)
+        self.parameter4_box.setEnabled(True)
 
     def combo_box_changed(self):
         self.plot_button.setEnabled(True)
 
     def rules_button_clicked(self):
         s = ""
-        reglas = binRulestoClassRules(self.rules, self.output)
+        subclase = []
+
+        if self.genre_box.currentText() == "Plataforma":
+            subclase.append(parametro1_arcade)
+            subclase.append(parametro2_arcade)
+            subclase.append(parametro3_arcade)
+            subclase.append(parametro4_arcade)
+            reglas = binRulestoClassRules(self.rules, self.output, self.entrada, self.salida, subclase)
+        elif self.genre_box.currentText() == "Calculo":
+            subclase.append(parametro1_calc)
+            subclase.append(parametro2_calc)
+            subclase.append(parametro3_calc)
+            subclase.append(parametro4_calc)
+            reglas = binRulestoClassRules(self.rules, self.output, self.entrada, self.salida, subclase)
         # salidas = intOutputtoClassOutput(self.output)
         print(colored("Reglas del sistema", 'magenta'))
         for i in range(len(reglas)):
-            s += "Regla " + str(i + 1) + ": " + str(reglas[i]) + "\n"
+            s += "Regla " + str(i + 1) + ": If " + str(reglas[i]) + "\n"
         print(s)
         # print(colored("Salida de cada regla", 'magenta'))
         # print(salidas)
@@ -261,11 +340,7 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
             self.w.show()
         # clearing old figure
         self.w.figure.clear()
-        plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentIndex())
-
-
-
-
+        plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText())
 
     def train_to_test_ratio_slider_value_changed(self):
         # change the ratio of train/test samples both in variable and in spinner
@@ -277,11 +352,15 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.trainSlider.setValue(self.train_spin_box.value())
         self.train_ratio = round(1 - self.trainSlider.value() / 100, 2)
 
+    def mutation_value_changed(self):
+        # change the poblation number value in variable
+        global mutProb
+        mutProb = self.poblation_box.value()
+
     def poblation_value_changed(self):
         # change the poblation number value in variable
         global popSize
         popSize = self.poblation_box.value()
-        print(popSize)
 
     def tournament_value_changed(self):
         # change the poblation number value in variable
@@ -354,8 +433,24 @@ def getRulesfromFittest(thisFittest):
     return reglas, salidas
 
 
+# Insertar datos de la sub clase correpondiente a la clase de la regla
+def getRulesSubClass(rule, i, ruleclass, subclass):
+    rule_text = ""
+    if not (rule[i] == 0) and not ((rule[i + 1] == 0) or (rule[i + 2] == 0)):
+        rule_text += ruleclass + " = " + subclass[0] + " or "
+    elif not (rule[i] == 0) and (rule[i + 1] == 0) and (rule[i + 2] == 0):
+        rule_text += ruleclass + " = " + subclass[0] + " and "
+    if not (rule[i + 1] == 0) and not (rule[i + 2] == 0):
+        rule_text += ruleclass + " = " + subclass[1] + " or "
+    elif not (rule[i + 1] == 0) and (rule[i + 2] == 0):
+        rule_text += ruleclass + " = " + subclass[1] + " and "
+    if not (rule[i + 2] == 0):
+        rule_text += ruleclass + " = " + subclass[2] + " and "
+    return rule_text
+
+
 # Transformar reglas binarias en reglas literales
-def binRulestoClassRules (rules, outputs):
+def binRulestoClassRules (rules, outputs, entrada, salida, subclase):
     soltext = []
     count = 0
     for rule in rules:
@@ -363,64 +458,29 @@ def binRulestoClassRules (rules, outputs):
         textosalida = ""
         for i in range(0, len(rule), 3):
             if i < 2:
-                if not (rule[i] == 0) and not ((rule[i + 1] == 0) or (rule[i + 2] == 0)):
-                    rule_text += "Low SepalLength or "
-                elif not (rule[i] == 0) and (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Low SepalLength and "
-                if not (rule[i + 1] == 0) and not (rule[i + 2] == 0):
-                    rule_text += "Med SepalLength or "
-                elif not (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Med SepalLength and "
-                if not (rule[i+2] == 0):
-                    rule_text += "High SepalLength and "
+                rule_text += getRulesSubClass(rule, i, entrada[0], subclase[0])
             elif 2 <= i < 5:
-                if not (rule[i] == 0) and not ((rule[i + 1] == 0) or (rule[i + 2] == 0)):
-                    rule_text += "Low SepalWidth or "
-                elif not (rule[i] == 0) and (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Low SepalWidth and "
-                if not (rule[i + 1] == 0) and not (rule[i + 2] == 0):
-                    rule_text += "Med SepalWidth or "
-                elif not (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Med SepalWidth and "
-                if not (rule[i + 2] == 0):
-                    rule_text += "High SepalWidth and "
+                rule_text += getRulesSubClass(rule, i, entrada[1], subclase[1])
             elif 5 <= i < 8:
-                if not (rule[i] == 0) and not ((rule[i + 1] == 0) or (rule[i + 2] == 0)):
-                    rule_text += "Low PetalLength or "
-                elif not (rule[i] == 0) and (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Low PetalLength and "
-                if not (rule[i + 1] == 0) and not (rule[i + 2] == 0):
-                    rule_text += "Med PetalLength or "
-                elif not (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Med PetalLength and "
-                if not (rule[i + 2] == 0):
-                    rule_text += "High PetalLength and "
+                rule_text += getRulesSubClass(rule, i, entrada[2], subclase[2])
             elif 8 <= i < 11:
-                if not (rule[i] == 0) and not ((rule[i + 1] == 0) or (rule[i + 2] == 0)):
-                    rule_text += "Low PetalWidth or "
-                elif not (rule[i] == 0) and (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Low PetalWidth and "
-                if not (rule[i + 1] == 0) and not (rule[i + 2] == 0):
-                    rule_text += "Med PetalWidth or "
-                elif not (rule[i + 1] == 0) and (rule[i + 2] == 0):
-                    rule_text += "Med PetalWidth and "
-                if not (rule[i + 2] == 0):
-                    rule_text += "High PetalWidth and "
+                rule_text += getRulesSubClass(rule, i, entrada[3], subclase[3])
         rule_text_2 = rule_text.rstrip('and ')
         # Output process
-        tuple = outputs[count]
-        if tuple[0] == 0:
-            textosalida += "Iris-Setosa"
-        elif tuple[0] == 1:
-            textosalida += "Iris-versicolor"
-        elif tuple[0] == 2:
-            textosalida += "Iris-virginica"
+        tupla = outputs[count]
+        if tupla[0] == 0:
+            textosalida += salida[0]
+        elif tupla[0] == 1:
+            textosalida += salida[1]
+        elif tupla[0] == 2:
+            textosalida += salida[2]
         else:
             textosalida += "Not Valid"
         rule_text_2 += " entonces " + textosalida
         soltext.append(rule_text_2)
         count += 1
     return soltext
+
 
 # Transformar tupla de salidas a literal
 def intOutputtoClassOutput (salidas):
@@ -439,31 +499,8 @@ def intOutputtoClassOutput (salidas):
 
 def plot_memberhip_function(graph, parametro):
 
-    titulo_parametro = ""
-    x_data = None
-
     # Variables universales
-    x_sepall = np.arange(0, 1.0001, 0.0001)
-    x_sepalw = np.arange(0, 1.0001, 0.0001)
-    x_petall = np.arange(0, 1.0001, 0.0001)
-    x_petalw = np.arange(0, 1.0001, 0.0001)
-
-    if parametro == 1:
-        titulo_parametro += "Sepal Largo"
-        x_data = x_sepall
-    elif parametro == 2:
-        titulo_parametro += "Sepal Ancho"
-        x_data = x_sepalw
-    elif parametro == 3:
-        titulo_parametro += "Petal Largo"
-        x_data = x_petall
-    elif parametro == 4:
-        titulo_parametro += "Petal Ancho"
-        x_data = x_petalw
-    else:
-        print(colored("Parametro invalido escoja otro", 'yellow'))
-        return
-
+    x_data = np.arange(0, 1.0001, 0.0001)
     #Generar funciones miembro
     pr_low = fuzz.trimf(x_data, [-0.5, 0, 0.5])
     pr_med = fuzz.trimf(x_data, [0, 0.5, 1])
@@ -475,7 +512,7 @@ def plot_memberhip_function(graph, parametro):
     ax0.plot(x_data, pr_low, 'b', linewidth=1.5, label='Bajo')
     ax0.plot(x_data, pr_med, 'g', linewidth=1.5, label='Medio')
     ax0.plot(x_data, pr_hi, 'r', linewidth=1.5, label='Alto')
-    ax0.set_title(titulo_parametro)
+    ax0.set_title(parametro)
     ax0.legend()
 
     graph.canvas.draw()
