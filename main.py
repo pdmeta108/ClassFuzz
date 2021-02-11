@@ -1,5 +1,5 @@
 import classifier
-from random import randint, random
+from random import randint, random, uniform
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -36,7 +36,7 @@ parametro4_arcade = ["Fuego", "Estrella", "Nube", "None"]  # Armas de Jugador
 parametro1_calc = ["Suma / Resta", "Multiplicacion", "Division", "None"]  # Operacion
 parametro2_calc = ["Baja", "Media", "Alta", "None"]  # Puntaje
 parametro3_calc = ["Simple",  "Intermedio", "Complejo", "None"]  # Dificultad
-parametro4_calc = ["Completo", "Incompleto", "None"]  # Progreso
+parametro4_calc = [ "Casi Nulo", "Incompleto", "Completo", "None"]  # Progreso
 
 class Indiv:
     def __init__(self, init=True):
@@ -143,6 +143,7 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.classify_button.clicked.connect(self.classify_button_clicked)
         self.rules_button.clicked.connect(self.rules_button_clicked)
         self.plot_button.clicked.connect(self.plot_button_clicked)
+        self.act_button.clicked.connect(self.act_button_clicked)
         if self.genre_box.currentTextChanged:
             self.genre_box.currentTextChanged.connect(self.genre_box_changed)
         if self.combo_box_parametros.currentTextChanged:
@@ -269,39 +270,6 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
         self.combo_box_parametros.setEnabled(True)
         self.genre_box.setEnabled(True)
 
-    def genre_box_changed(self):
-
-        if self.genre_box.currentText() == "Plataforma":
-            self.parameter1_box.clear()
-            self.parameter2_box.clear()
-            self.parameter3_box.clear()
-            self.parameter4_box.clear()
-            self.parameter1_box.addItems(parametro1_arcade)
-            self.parameter2_box.addItems(parametro2_arcade)
-            self.parameter3_box.addItems(parametro3_arcade)
-            self.parameter4_box.addItems(parametro4_arcade)
-        elif self.genre_box.currentText() == "Calculo":
-            self.parameter1_box.clear()
-            self.parameter2_box.clear()
-            self.parameter3_box.clear()
-            self.parameter4_box.clear()
-            self.parameter1_box.addItems(parametro1_calc)
-            self.parameter2_box.addItems(parametro2_calc)
-            self.parameter3_box.addItems(parametro3_calc)
-            self.parameter4_box.addItems(parametro4_calc)
-        elif self.genre_box.currentText() == "Escoja":
-            pass
-        else:
-            print(colored("Opcion invalida, escoja otra", "yellow"))
-
-        self.parameter1_box.setEnabled(True)
-        self.parameter2_box.setEnabled(True)
-        self.parameter3_box.setEnabled(True)
-        self.parameter4_box.setEnabled(True)
-
-    def combo_box_changed(self):
-        self.plot_button.setEnabled(True)
-
     def rules_button_clicked(self):
         s = ""
         subclase = []
@@ -340,7 +308,78 @@ class Main(QtWidgets.QMainWindow, Ui_MainWindow):
             self.w.show()
         # clearing old figure
         self.w.figure.clear()
-        plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText())
+        if self.combo_box_parametros.currentText() == "Enemigo":
+            plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText(), subclase=parametro1_arcade)
+        elif self.combo_box_parametros.currentText() == "Hueco":
+            plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText(), subclase=parametro2_arcade)
+        elif self.combo_box_parametros.currentText() == "Obstaculo":
+            plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText(), subclase=parametro3_arcade)
+        elif self.combo_box_parametros.currentText() == "Arma":
+            plot_memberhip_function(graph=self.w, parametro=self.combo_box_parametros.currentText(), subclase=parametro4_arcade)
+
+    def act_button_clicked(self):
+        valor_1 = None
+        valor_2 = None
+        valor_3 = None
+        valor_4 = None
+        if self.genre_box.currentText() == "Plataforma":
+            valor_1 = getSubClassValue(self.parameter1_box.currentText(), parametro1_arcade)
+            valor_2 = getSubClassValue(self.parameter2_box.currentText(), parametro2_arcade)
+            valor_3 = getSubClassValue(self.parameter3_box.currentText(), parametro3_arcade)
+            valor_4 = getSubClassValue(self.parameter4_box.currentText(), parametro4_arcade)
+
+        elif self.genre_box.currentText() == "Calculo":
+            valor_1 = getSubClassValue(self.parameter1_box.currentText(), parametro1_calc)
+            valor_2 = getSubClassValue(self.parameter2_box.currentText(), parametro2_calc)
+            valor_3 = getSubClassValue(self.parameter3_box.currentText(), parametro3_calc)
+            valor_4 = getSubClassValue(self.parameter4_box.currentText(), parametro4_calc)
+        elif self.genre_box.currentText() == "Escoja":
+            pass
+        else:
+            print(colored("Por favor escoja el género del videojuego y los parametros de las subclase que pertenecen", "yellow"))
+
+        print(colored("Valores de los parametros para activar las reglas", "red"))
+        print(colored(valor_1, "red"))
+        print(colored(valor_2, "red"))
+        print(colored(valor_3, "red"))
+        print(colored(valor_4, "red"))
+
+    def genre_box_changed(self):
+
+        if self.genre_box.currentText() == "Plataforma":
+            self.parameter1_box.clear()
+            self.parameter2_box.clear()
+            self.parameter3_box.clear()
+            self.parameter4_box.clear()
+            self.combo_box_parametros.clear()
+            self.parameter1_box.addItems(parametro1_arcade)
+            self.parameter2_box.addItems(parametro2_arcade)
+            self.parameter3_box.addItems(parametro3_arcade)
+            self.parameter4_box.addItems(parametro4_arcade)
+            self.combo_box_parametros.addItems(self.entrada)
+        elif self.genre_box.currentText() == "Calculo":
+            self.parameter1_box.clear()
+            self.parameter2_box.clear()
+            self.parameter3_box.clear()
+            self.parameter4_box.clear()
+            self.combo_box_parametros.clear()
+            self.parameter1_box.addItems(parametro1_calc)
+            self.parameter2_box.addItems(parametro2_calc)
+            self.parameter3_box.addItems(parametro3_calc)
+            self.parameter4_box.addItems(parametro4_calc)
+            self.combo_box_parametros.addItems(self.entrada)
+        elif self.genre_box.currentText() == "Escoja":
+            pass
+        else:
+            print(colored("Opcion invalida, escoja otra", "yellow"))
+
+        self.parameter1_box.setEnabled(True)
+        self.parameter2_box.setEnabled(True)
+        self.parameter3_box.setEnabled(True)
+        self.parameter4_box.setEnabled(True)
+
+    def combo_box_changed(self):
+        self.plot_button.setEnabled(True)
 
     def train_to_test_ratio_slider_value_changed(self):
         # change the ratio of train/test samples both in variable and in spinner
@@ -482,26 +521,23 @@ def binRulestoClassRules (rules, outputs, entrada, salida, subclase):
     return soltext
 
 
-# Transformar tupla de salidas a literal
-def intOutputtoClassOutput (salidas):
-    textosalida = ""
-    for salida in salidas:
-        value = int(salida[0])
-        if value == 0:
-            textosalida += "Iris-Setosa" + ", "
-        elif value == 1:
-            textosalida += "Iris-versicolor" + ", "
-        elif value == 2:
-            textosalida += "Iris-virginica" + ", "
-        else:
-            textosalida += "Not Valid" + ", "
-    return textosalida.rstrip(', ')
+# Obtener valor de parametros de subclase
+def getSubClassValue(parametro_box, subclase):
+    if parametro_box == subclase[0]:
+        return round(uniform(0, 0.25), 3)
+    elif parametro_box == subclase[1]:
+        return round(uniform(0.25, 0.75), 3)
+    elif parametro_box == subclase[2]:
+        return round(uniform(0.75, 1), 3)
+    else:
+        return 0
 
-def plot_memberhip_function(graph, parametro):
+
+def plot_memberhip_function(graph, parametro, subclase):
 
     # Variables universales
     x_data = np.arange(0, 1.0001, 0.0001)
-    #Generar funciones miembro
+    # Generar funciones miembro
     pr_low = fuzz.trimf(x_data, [-0.5, 0, 0.5])
     pr_med = fuzz.trimf(x_data, [0, 0.5, 1])
     pr_hi = fuzz.trimf(x_data, [0.5, 1, 1.5])
@@ -509,13 +545,14 @@ def plot_memberhip_function(graph, parametro):
     # Visualizar universos y funciones miembros
     ax0 = graph.figure.add_subplot(111)
 
-    ax0.plot(x_data, pr_low, 'b', linewidth=1.5, label='Bajo')
-    ax0.plot(x_data, pr_med, 'g', linewidth=1.5, label='Medio')
-    ax0.plot(x_data, pr_hi, 'r', linewidth=1.5, label='Alto')
+    ax0.plot(x_data, pr_low, 'b', linewidth=1.5, label=subclase[0])
+    ax0.plot(x_data, pr_med, 'g', linewidth=1.5, label=subclase[1])
+    ax0.plot(x_data, pr_hi, 'r', linewidth=1.5, label=subclase[2])
     ax0.set_title(parametro)
     ax0.legend()
 
     graph.canvas.draw()
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
